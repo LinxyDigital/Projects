@@ -3,7 +3,7 @@
 -- ------------------------------------------------------
 
 -- Tabela de Categorias - Armazena as categorias de produtos e serviços, com suporte a subcategorias
-CREATE TABLE IF NOT EXISTS categories (
+CREATE TABLE categories (
     id INT AUTO_INCREMENT PRIMARY KEY,
     name VARCHAR(100) NOT NULL COMMENT 'Nome da categoria',
     description TEXT COMMENT 'Descrição detalhada da categoria',
@@ -15,7 +15,7 @@ CREATE TABLE IF NOT EXISTS categories (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Tabela de Produtos - Armazena todos os produtos da loja, tanto físicos quanto digitais
-CREATE TABLE IF NOT EXISTS products (
+CREATE TABLE products (
     id INT AUTO_INCREMENT PRIMARY KEY,
     name VARCHAR(255) NOT NULL COMMENT 'Nome do produto',
     description TEXT COMMENT 'Descrição detalhada do produto',
@@ -41,7 +41,7 @@ CREATE TABLE IF NOT EXISTS products (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Tabela de Imagens de Produto - Armazena os caminhos das imagens otimizadas associadas aos produtos
-CREATE TABLE IF NOT EXISTS product_images (
+CREATE TABLE product_images (
     id INT AUTO_INCREMENT PRIMARY KEY,
     product_id INT NOT NULL COMMENT 'ID do produto associado',
     image_path VARCHAR(255) NOT NULL COMMENT 'Caminho relativo da imagem otimizada no storage público',
@@ -60,7 +60,7 @@ CREATE TABLE IF NOT EXISTS product_images (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Tabela de Serviços - Armazena todos os serviços oferecidos pela empresa
-CREATE TABLE IF NOT EXISTS services (
+CREATE TABLE services (
     id INT AUTO_INCREMENT PRIMARY KEY,
     name VARCHAR(255) NOT NULL COMMENT 'Nome do serviço',
     description TEXT COMMENT 'Descrição detalhada do serviço',
@@ -82,7 +82,7 @@ CREATE TABLE IF NOT EXISTS services (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Tabela de Imagens de Serviço - Armazena os caminhos das imagens otimizadas associadas aos serviços
-CREATE TABLE IF NOT EXISTS service_images (
+CREATE TABLE service_images (
     id INT AUTO_INCREMENT PRIMARY KEY,
     service_id INT NOT NULL COMMENT 'ID do serviço associado',
     image_path VARCHAR(255) NOT NULL COMMENT 'Caminho relativo da imagem otimizada no storage público',
@@ -101,7 +101,7 @@ CREATE TABLE IF NOT EXISTS service_images (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Tabela de Disponibilidade de Serviço - Armazena os horários disponíveis para cada serviço
-CREATE TABLE IF NOT EXISTS service_availability (
+CREATE TABLE service_availability (
     id INT AUTO_INCREMENT PRIMARY KEY,
     service_id INT NOT NULL COMMENT 'ID do serviço',
     weekday TINYINT NOT NULL COMMENT '0-6 (domingo-sábado)',
@@ -116,26 +116,24 @@ CREATE TABLE IF NOT EXISTS service_availability (
 -- ------------------------------------------------------
 
 -- Tabela de Clientes - Armazena os dados de todos os clientes da loja
-CREATE TABLE IF NOT EXISTS customers (
+CREATE TABLE customers (
     id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT NOT NULL COMMENT 'ID do usuário relacionado',
     name VARCHAR(255) NOT NULL COMMENT 'Nome completo do cliente',
-    email VARCHAR(255) NOT NULL COMMENT 'Email do cliente (usado para login)',
-    password VARCHAR(255) NOT NULL COMMENT 'Senha do cliente (criptografada)',
     phone VARCHAR(20) COMMENT 'Número de telefone do cliente',
     tax_id VARCHAR(20) COMMENT 'CPF ou CNPJ do cliente',
-    status ENUM('active', 'inactive') DEFAULT 'active' COMMENT 'Status: ativo ou inativo',
     registration_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT 'Data de cadastro',
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT 'Data da última atualização',
-    UNIQUE INDEX idx_email (email),
-    INDEX idx_tax_id (tax_id),
-    INDEX idx_status (status)
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    INDEX idx_user_id (user_id),
+    INDEX idx_tax_id (tax_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- Tabela de Endereços do Cliente - Armazena os múltiplos endereços de cada cliente
-CREATE TABLE IF NOT EXISTS customer_addresses (
+-- Tabela de Endereços do Cliente - Armazena os múltiplos endereços de cada cliente (até 2 endereços conforme solicitado)
+CREATE TABLE client_addresses (
     id INT AUTO_INCREMENT PRIMARY KEY,
-    customer_id INT NOT NULL COMMENT 'ID do cliente',
-    address_type VARCHAR(20) COMMENT 'Tipo do endereço: residencial, comercial, etc.',
+    client_id INT NOT NULL COMMENT 'ID do cliente',
+    address_type ENUM('main', 'secondary') NOT NULL DEFAULT 'main' COMMENT 'Tipo do endereço: principal ou secundário',
     postal_code VARCHAR(10) NOT NULL COMMENT 'CEP',
     street VARCHAR(255) NOT NULL COMMENT 'Nome da rua/logradouro',
     number VARCHAR(20) NOT NULL COMMENT 'Número do endereço',
@@ -143,28 +141,13 @@ CREATE TABLE IF NOT EXISTS customer_addresses (
     neighborhood VARCHAR(100) NOT NULL COMMENT 'Bairro',
     city VARCHAR(100) NOT NULL COMMENT 'Cidade',
     state VARCHAR(2) NOT NULL COMMENT 'Estado (UF)',
-    is_main BOOLEAN DEFAULT FALSE COMMENT 'Indica se é o endereço principal',
+    is_active BOOLEAN DEFAULT TRUE COMMENT 'Indica se o endereço está ativo',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT 'Data de cadastro',
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT 'Data da última atualização',
-    FOREIGN KEY (customer_id) REFERENCES customers(id) ON DELETE CASCADE,
-    INDEX (customer_id),
-    INDEX (postal_code),
-    INDEX (is_main)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
--- Tabela de Usuários Administradores - Armazena os dados dos administradores do sistema
-CREATE TABLE IF NOT EXISTS administrators (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    name VARCHAR(255) NOT NULL COMMENT 'Nome do administrador',
-    email VARCHAR(255) NOT NULL COMMENT 'Email do administrador (usado para login)',
-    password VARCHAR(255) NOT NULL COMMENT 'Senha do administrador (criptografada)',
-    access_level ENUM('admin', 'manager', 'seller') DEFAULT 'seller' COMMENT 'Nível de acesso: admin, gerente ou vendedor',
-    status ENUM('active', 'inactive') DEFAULT 'active' COMMENT 'Status: ativo ou inativo',
-    registration_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT 'Data de cadastro',
-    last_access TIMESTAMP NULL COMMENT 'Data do último acesso ao sistema',
-    UNIQUE INDEX idx_email (email),
-    INDEX idx_access_level (access_level),
-    INDEX idx_status (status)
+    FOREIGN KEY (client_id) REFERENCES clients(id) ON DELETE CASCADE,
+    UNIQUE KEY uk_client_address_type (client_id, address_type),
+    INDEX (client_id),
+    INDEX (postal_code)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ------------------------------------------------------
@@ -172,7 +155,7 @@ CREATE TABLE IF NOT EXISTS administrators (
 -- ------------------------------------------------------
 
 -- Tabela de Configurações da Loja - Armazena todas as configurações personalizáveis da loja
-CREATE TABLE IF NOT EXISTS store_settings (
+CREATE TABLE store_settings (
     id INT AUTO_INCREMENT PRIMARY KEY,
     store_name VARCHAR(100) NOT NULL COMMENT 'Nome da loja',
     logo_url VARCHAR(255) COMMENT 'URL da logo da loja',
@@ -191,7 +174,7 @@ CREATE TABLE IF NOT EXISTS store_settings (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Tabela de Produtos em Destaque - Armazena os produtos destacados na loja em diferentes seções
-CREATE TABLE IF NOT EXISTS featured_products (
+CREATE TABLE featured_products (
     id INT AUTO_INCREMENT PRIMARY KEY,
     product_id INT NOT NULL COMMENT 'ID do produto em destaque',
     display_order INT DEFAULT 0 COMMENT 'Ordem de exibição',
@@ -205,7 +188,7 @@ CREATE TABLE IF NOT EXISTS featured_products (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Tabela de Serviços em Destaque - Armazena os serviços destacados na loja em diferentes seções
-CREATE TABLE IF NOT EXISTS featured_services (
+CREATE TABLE featured_services (
     id INT AUTO_INCREMENT PRIMARY KEY,
     service_id INT NOT NULL COMMENT 'ID do serviço em destaque',
     display_order INT DEFAULT 0 COMMENT 'Ordem de exibição',
@@ -223,20 +206,20 @@ CREATE TABLE IF NOT EXISTS featured_services (
 -- ------------------------------------------------------
 
 -- Tabela de Carrinhos - Armazena os carrinhos de compra dos clientes
-CREATE TABLE IF NOT EXISTS carts (
+CREATE TABLE carts (
     id INT AUTO_INCREMENT PRIMARY KEY,
-    customer_id INT COMMENT 'ID do cliente (NULL para carrinhos de visitantes)',
+    client_id INT COMMENT 'ID do cliente (NULL para carrinhos de visitantes)',
     session_id VARCHAR(100) COMMENT 'ID da sessão para carrinho de visitantes não logados',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT 'Data de criação do carrinho',
     last_modified TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT 'Data da última modificação',
-    FOREIGN KEY (customer_id) REFERENCES customers(id) ON DELETE CASCADE,
-    INDEX (customer_id),
+    FOREIGN KEY (client_id) REFERENCES clients(id) ON DELETE CASCADE,
+    INDEX (client_id),
     INDEX (session_id),
     INDEX (last_modified)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Tabela de Itens do Carrinho (Produtos) - Armazena os produtos adicionados aos carrinhos
-CREATE TABLE IF NOT EXISTS cart_products (
+CREATE TABLE cart_products (
     id INT AUTO_INCREMENT PRIMARY KEY,
     cart_id INT NOT NULL COMMENT 'ID do carrinho',
     product_id INT NOT NULL COMMENT 'ID do produto',
@@ -251,7 +234,7 @@ CREATE TABLE IF NOT EXISTS cart_products (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Tabela de Itens do Carrinho (Serviços) - Armazena os serviços adicionados aos carrinhos
-CREATE TABLE IF NOT EXISTS cart_services (
+CREATE TABLE cart_services (
     id INT AUTO_INCREMENT PRIMARY KEY,
     cart_id INT NOT NULL COMMENT 'ID do carrinho',
     service_id INT NOT NULL COMMENT 'ID do serviço',
@@ -267,9 +250,9 @@ CREATE TABLE IF NOT EXISTS cart_services (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Tabela de Pedidos - Armazena todos os pedidos feitos pelos clientes
-CREATE TABLE IF NOT EXISTS orders (
+CREATE TABLE orders (
     id INT AUTO_INCREMENT PRIMARY KEY,
-    customer_id INT NOT NULL COMMENT 'ID do cliente que fez o pedido',
+    client_id INT NOT NULL COMMENT 'ID do cliente que fez o pedido',
     delivery_address_id INT COMMENT 'ID do endereço de entrega',
     products_total DECIMAL(10,2) NOT NULL DEFAULT 0 COMMENT 'Valor total dos produtos',
     services_total DECIMAL(10,2) NOT NULL DEFAULT 0 COMMENT 'Valor total dos serviços',
@@ -282,9 +265,9 @@ CREATE TABLE IF NOT EXISTS orders (
     tracking_code VARCHAR(50) COMMENT 'Código de rastreamento da entrega',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT 'Data de criação do pedido',
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT 'Data da última atualização',
-    FOREIGN KEY (customer_id) REFERENCES customers(id) ON DELETE RESTRICT,
-    FOREIGN KEY (delivery_address_id) REFERENCES customer_addresses(id) ON DELETE SET NULL,
-    INDEX (customer_id),
+    FOREIGN KEY (client_id) REFERENCES clients(id) ON DELETE RESTRICT,
+    FOREIGN KEY (delivery_address_id) REFERENCES client_addresses(id) ON DELETE SET NULL,
+    INDEX (client_id),
     INDEX (delivery_address_id),
     INDEX (payment_status),
     INDEX (order_status),
@@ -292,7 +275,7 @@ CREATE TABLE IF NOT EXISTS orders (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Tabela de Itens do Pedido (Produtos) - Armazena os produtos incluídos em cada pedido
-CREATE TABLE IF NOT EXISTS order_products (
+CREATE TABLE order_products (
     id INT AUTO_INCREMENT PRIMARY KEY,
     order_id INT NOT NULL COMMENT 'ID do pedido',
     product_id INT NOT NULL COMMENT 'ID do produto',
@@ -306,7 +289,7 @@ CREATE TABLE IF NOT EXISTS order_products (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Tabela de Itens do Pedido (Serviços) - Armazena os serviços incluídos em cada pedido
-CREATE TABLE IF NOT EXISTS order_services (
+CREATE TABLE order_services (
     id INT AUTO_INCREMENT PRIMARY KEY,
     order_id INT NOT NULL COMMENT 'ID do pedido',
     service_id INT NOT NULL COMMENT 'ID do serviço',
@@ -320,7 +303,7 @@ CREATE TABLE IF NOT EXISTS order_services (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Tabela de Pagamentos - Armazena os detalhes de pagamento de cada pedido
-CREATE TABLE IF NOT EXISTS payments (
+CREATE TABLE payments (
     id INT AUTO_INCREMENT PRIMARY KEY,
     order_id INT NOT NULL COMMENT 'ID do pedido relacionado',
     payment_method ENUM('pix', 'delivery') NOT NULL COMMENT 'Método de pagamento: pix ou na entrega',
@@ -338,7 +321,7 @@ CREATE TABLE IF NOT EXISTS payments (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Tabela de Histórico de Status do Pedido - Armazena o histórico de alterações de status dos pedidos
-CREATE TABLE IF NOT EXISTS order_status_history (
+CREATE TABLE order_status_history (
     id INT AUTO_INCREMENT PRIMARY KEY,
     order_id INT NOT NULL COMMENT 'ID do pedido',
     previous_status ENUM('pending', 'preparing', 'ready', 'shipping', 'completed', 'cancelled') COMMENT 'Status anterior do pedido',
@@ -354,7 +337,7 @@ CREATE TABLE IF NOT EXISTS order_status_history (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Tabela de Comprovantes - Armazena os comprovantes gerados para os pedidos
-CREATE TABLE IF NOT EXISTS receipts (
+CREATE TABLE receipts (
     id INT AUTO_INCREMENT PRIMARY KEY,
     order_id INT NOT NULL COMMENT 'ID do pedido relacionado',
     receipt_type ENUM('voucher', 'invoice', 'receipt') NOT NULL COMMENT 'Tipo: voucher, nota fiscal ou boleto',
@@ -363,5 +346,51 @@ CREATE TABLE IF NOT EXISTS receipts (
     FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE,
     INDEX (order_id),
     INDEX (receipt_type)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ------------------------------------------------------
+-- SEÇÃO 5: SISTEMA DE AUTENTICAÇÃO INTEGRADO
+-- ------------------------------------------------------
+
+-- Tabela de Usuários - Centraliza a autenticação para todas as entidades do sistema (clientes e administradores)
+CREATE TABLE users (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    email VARCHAR(255) NOT NULL COMMENT 'Email do usuário (usado para login)',
+    password VARCHAR(255) NOT NULL COMMENT 'Senha do usuário (criptografada)',
+    role ENUM('client', 'administrator') NOT NULL COMMENT 'Tipo de usuário: cliente ou administrador',
+    status ENUM('active', 'inactive') DEFAULT 'active' COMMENT 'Status: ativo ou inativo',
+    last_login TIMESTAMP NULL COMMENT 'Data e hora do último login',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT 'Data de criação do registro',
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT 'Data da última atualização',
+    UNIQUE INDEX idx_email (email),
+    INDEX idx_role (role),
+    INDEX idx_status (status)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- tabela de users e administrators
+CREATE TABLE clients (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT NOT NULL COMMENT 'ID do usuário relacionado',
+    name VARCHAR(255) NOT NULL COMMENT 'Nome completo do cliente',
+    phone VARCHAR(20) COMMENT 'Número de telefone do cliente',
+    tax_id VARCHAR(20) COMMENT 'CPF ou CNPJ do cliente',
+    registration_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT 'Data de cadastro',
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT 'Data da última atualização',
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    INDEX idx_user_id (user_id),
+    INDEX idx_tax_id (tax_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Alterar tabela de Administradores para relacionar com a tabela Users
+DROP TABLE administrators;
+CREATE TABLE   administrators (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT NOT NULL COMMENT 'ID do usuário relacionado',
+    name VARCHAR(255) NOT NULL COMMENT 'Nome do administrador',
+    access_level ENUM('admin', 'manager', 'seller') DEFAULT 'seller' COMMENT 'Nível de acesso: admin, gerente ou vendedor',
+    last_access TIMESTAMP NULL COMMENT 'Data do último acesso ao sistema',
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    INDEX idx_user_id (user_id),
+    INDEX idx_access_level (access_level)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
