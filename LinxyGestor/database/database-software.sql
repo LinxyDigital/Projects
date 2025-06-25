@@ -1,4 +1,11 @@
 -- ------------------------------------------------------
+-- Definição explícita do banco de dados a ser usado
+-- ------------------------------------------------------
+-- O erro menciona 'rio-logs'.customers, verifique se este é o banco de dados correto
+CREATE DATABASE IF NOT EXISTS `linxygestor`;
+USE `linxygestor`;
+
+-- ------------------------------------------------------
 -- SEÇÃO 1: PRODUTOS E SERVIÇOS
 -- ------------------------------------------------------
 
@@ -115,19 +122,7 @@ CREATE TABLE service_availability (
 -- SEÇÃO 2: CLIENTES
 -- ------------------------------------------------------
 
--- Tabela de Clientes - Armazena os dados de todos os clientes da loja
-CREATE TABLE customers (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    user_id INT NOT NULL COMMENT 'ID do usuário relacionado',
-    name VARCHAR(255) NOT NULL COMMENT 'Nome completo do cliente',
-    phone VARCHAR(20) COMMENT 'Número de telefone do cliente',
-    tax_id VARCHAR(20) COMMENT 'CPF ou CNPJ do cliente',
-    registration_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT 'Data de cadastro',
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT 'Data da última atualização',
-    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
-    INDEX idx_user_id (user_id),
-    INDEX idx_tax_id (tax_id)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+-- A tabela clients foi movida para depois da tabela users (seção 5) para resolver problemas de dependência
 
 -- Tabela de Endereços do Cliente - Armazena os múltiplos endereços de cada cliente (até 2 endereços conforme solicitado)
 CREATE TABLE client_addresses (
@@ -144,7 +139,6 @@ CREATE TABLE client_addresses (
     is_active BOOLEAN DEFAULT TRUE COMMENT 'Indica se o endereço está ativo',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT 'Data de cadastro',
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT 'Data da última atualização',
-    FOREIGN KEY (client_id) REFERENCES clients(id) ON DELETE CASCADE,
     UNIQUE KEY uk_client_address_type (client_id, address_type),
     INDEX (client_id),
     INDEX (postal_code)
@@ -212,7 +206,6 @@ CREATE TABLE carts (
     session_id VARCHAR(100) COMMENT 'ID da sessão para carrinho de visitantes não logados',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT 'Data de criação do carrinho',
     last_modified TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT 'Data da última modificação',
-    FOREIGN KEY (client_id) REFERENCES clients(id) ON DELETE CASCADE,
     INDEX (client_id),
     INDEX (session_id),
     INDEX (last_modified)
@@ -265,8 +258,6 @@ CREATE TABLE orders (
     tracking_code VARCHAR(50) COMMENT 'Código de rastreamento da entrega',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT 'Data de criação do pedido',
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT 'Data da última atualização',
-    FOREIGN KEY (client_id) REFERENCES clients(id) ON DELETE RESTRICT,
-    FOREIGN KEY (delivery_address_id) REFERENCES client_addresses(id) ON DELETE SET NULL,
     INDEX (client_id),
     INDEX (delivery_address_id),
     INDEX (payment_status),
@@ -330,7 +321,6 @@ CREATE TABLE order_status_history (
     admin_id INT COMMENT 'ID do administrador que alterou o status',
     changed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT 'Data da alteração de status',
     FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE,
-    FOREIGN KEY (admin_id) REFERENCES administrators(id) ON DELETE SET NULL,
     INDEX (order_id),
     INDEX (admin_id),
     INDEX (changed_at)
@@ -367,7 +357,7 @@ CREATE TABLE users (
     INDEX idx_status (status)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- tabela de users e administrators
+-- Tabela de clientes
 CREATE TABLE clients (
     id INT AUTO_INCREMENT PRIMARY KEY,
     user_id INT NOT NULL COMMENT 'ID do usuário relacionado',
@@ -381,9 +371,8 @@ CREATE TABLE clients (
     INDEX idx_tax_id (tax_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- Alterar tabela de Administradores para relacionar com a tabela Users
-DROP TABLE administrators;
-CREATE TABLE   administrators (
+-- Tabela de Administradores 
+CREATE TABLE administrators (
     id INT AUTO_INCREMENT PRIMARY KEY,
     user_id INT NOT NULL COMMENT 'ID do usuário relacionado',
     name VARCHAR(255) NOT NULL COMMENT 'Nome do administrador',
@@ -393,4 +382,25 @@ CREATE TABLE   administrators (
     INDEX idx_user_id (user_id),
     INDEX idx_access_level (access_level)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ------------------------------------------------------
+-- SEÇÃO 6: ADIÇÃO DE CHAVES ESTRANGEIRAS PENDENTES
+-- ------------------------------------------------------
+
+-- Adicione chaves estrangeiras para a tabela carts
+ALTER TABLE carts
+ADD FOREIGN KEY (client_id) REFERENCES clients(id) ON DELETE CASCADE;
+
+-- Adicione chaves estrangeiras para a tabela client_addresses
+ALTER TABLE client_addresses
+ADD FOREIGN KEY (client_id) REFERENCES clients(id) ON DELETE CASCADE;
+
+-- Adicione chaves estrangeiras para a tabela orders
+ALTER TABLE orders
+ADD FOREIGN KEY (client_id) REFERENCES clients(id) ON DELETE RESTRICT,
+ADD FOREIGN KEY (delivery_address_id) REFERENCES client_addresses(id) ON DELETE SET NULL;
+
+-- Adicione chaves estrangeiras para order_status_history
+ALTER TABLE order_status_history
+ADD FOREIGN KEY (admin_id) REFERENCES administrators(id) ON DELETE SET NULL;
 
